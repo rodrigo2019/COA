@@ -42,13 +42,13 @@ def COA(FOBJ, lu, nfevalMAX, n_packs=20, n_coy=5):
             tendency = np.median(coyotes_aux, 0)
             new_coyotes = np.zeros((n_coy, D))
 
-            for c in range(n_packs):
+            for c in range(n_coy):
                 rc1 = c
                 while rc1 == c:
-                    rc1 = np.random.randint(n_packs)
+                    rc1 = np.random.randint(n_coy)
                 rc2 = c
                 while rc2 == c or rc2 == rc1:
-                    rc2 = np.random.randint(n_packs)
+                    rc2 = np.random.randint(n_coy)
 
                 new_coyotes[c, :] = coyotes_aux[c, :] + np.random.rand()*(c_alpha - coyotes_aux[rc1, :]) + \
                                     np.random.rand()*(tendency - coyotes_aux[rc2, :])
@@ -63,7 +63,7 @@ def COA(FOBJ, lu, nfevalMAX, n_packs=20, n_coy=5):
                     costs_aux[c] = new_cost
                     coyotes_aux[c, :] = new_coyotes[c, :]
 
-            parents = np.random.permutation(n_packs)[:2]
+            parents = np.random.permutation(n_coy)[:2]
             prob1 = (1-Ps)/2
             prob2 = prob1
             pdr = np.random.permutation(D)
@@ -99,7 +99,7 @@ def COA(FOBJ, lu, nfevalMAX, n_packs=20, n_coy=5):
         if n_packs > 1:
             if np.random.rand() < p_leave:
                 rp = np.random.permutation(n_packs)[:2]
-                rc = np.array([np.random.randint(n_packs), np.random.randint(n_packs)])
+                rc = np.array([np.random.randint(n_coy), np.random.randint(n_coy)])
                 aux = packs[rp[0], rc[0]]
                 packs[rp[0], rc[0]] = packs[rp[1], rc[1]]
                 packs[rp[1], rc[1]] = aux
@@ -121,7 +121,7 @@ if __name__=="__main__":
     lu[0, :] = -100
     lu[1, :] = 100
     nfeval = 1000*d
-    n_packs = 10
+    n_packs = 40
     n_coy = 10
     t = time.time()
     y = np.zeros((1, 100))
