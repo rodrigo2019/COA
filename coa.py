@@ -1,4 +1,5 @@
 from multiprocessing import Pool
+import numba as nb
 import numpy as np
 import os
 
@@ -19,7 +20,7 @@ class COA:
         self.ps = 1 / self.problem_dimensions
 
     def fit(self, func, n_feval_max):
-        executor = Pool(self.workers)
+        #executor = Pool(self.workers)
 
         p_leave = 0.005*(self.n_coyotes ** 2)
         pop_total = self.n_packs * self.n_coyotes
@@ -40,7 +41,8 @@ class COA:
             try:
                 year += 1
                 args_list = [[func, coyotes[packs[p, :], :], costs[packs[p, :]], ages[packs[p, :]], p] for p in range(self.n_packs)]
-                results = executor.imap_unordered(self._eval_pack, args_list)
+                #results = executor.imap_unordered(self._eval_pack, args_list)
+                results = [self._eval_pack(arg[0], arg[1], arg[2], arg[3], arg[4]) for arg in args_list]
 
                 for result in results:
                     coyotes_aux, costs_aux, ages_aux, n_feval_ret, pack_id = result
@@ -60,25 +62,27 @@ class COA:
                 global_best_cost = costs.min()
                 global_best_params = coyotes[costs.argmin()]
             except KeyboardInterrupt:
-                executor.terminate()
-                executor.join()
-        executor.terminate()
-        executor.join()
+                raise
+                #executor.terminate()
+                #executor.join()
+        #executor.terminate()
+        #executor.join()
         return global_best_cost, global_best_params
 
-    def _eval_pack(self, *args):
+    #@nb.jit(nb.int32(nb.types.pyfunc_type))
+    def _eval_pack(self, func, coyotes_aux, costs_aux, ages_aux, pack_id):
 
-        func, coyotes_aux, costs_aux, ages_aux, pack_id = args[0]
         ind = np.argsort(costs_aux)
         costs_aux = costs_aux[ind]
         coyotes_aux = coyotes_aux[ind, :]
         ages_aux = ages_aux[ind]
         c_alpha = coyotes_aux[0, :]
 
-        tendency = np.median(coyotes_aux, 0)
+        n_feval = 30
+        """tendency = np.median(coyotes_aux, 0)
         new_coyotes = np.zeros((self.n_coyotes, self.problem_dimensions))
-
-        n_feval = 0
+        t = time.time()
+        
         for c in range(self.n_coyotes):
             rc1 = c
             while rc1 == c:
@@ -129,7 +133,7 @@ class COA:
             coyotes_aux[which[0], :] = pup
             costs_aux[which[0]] = pup_cost
             ages_aux[which[0]] = 0
-
+        print(time.time()-t)"""
         return coyotes_aux, costs_aux, ages_aux, n_feval, pack_id
 
 
@@ -142,17 +146,18 @@ if __name__ == "__main__":
     from tqdm import tqdm
     d = 30
     lu = np.zeros((2, d))
-    lu[0, :] = -100
-    lu[1, :] = 100
+    lu[0, :] = -1
+    lu[1, :] = 1
     nfeval = 1000*d
-    n_packs = 10
-    n_coy = 10
+    n_packs = 20
+    n_coy = 5
     t = time.time()
     y = np.zeros((1, 100))
     coa = COA(lu,n_packs=n_packs,n_coyotes=n_coy)
     for i in tqdm(range(100)):
         mini, par = coa.fit(fobj, nfeval)
         y[0, i] = mini
+        #print(par)
         #print(time.time()-t)
         t = time.time()
     print([np.min(y), np.mean(y), np.median(y), np.max(y), np.std(y)])
